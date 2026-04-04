@@ -10,6 +10,7 @@ services:
     networks:
       - erp-network
     restart: unless-stopped
+  
   erp_zookeeper:
     image: confluentinc/cp-zookeeper:7.9.0
     container_name: erp-zookeeper
@@ -18,6 +19,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 21818:2181
+    networks:
+      - erp-network
 
   erp_kafka:
     image: confluentinc/cp-kafka:7.9.0
@@ -38,6 +41,19 @@ services:
     networks:
       - erp-network
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-cluster-ui
+    ports:
+      - "9095:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: erp_kafka:9092
+    depends_on:
+      - erp_kafka
+    networks:
+      - erp-network
+
   erp_db_postgres:
     image: 'postgres:16.4'
     container_name: erp-postgres
@@ -49,8 +65,6 @@ services:
       POSTGRES_DB: ${ERP_PG_DATABASE}
     ports:
       - "${ERP_PG_PORT}:5432"
-    networks:
-      - erp-network
 
   erp_flyway:
     container_name: erp-flyway
@@ -64,17 +78,17 @@ services:
       - migrate
     volumes:
       - ./src/main/resources/db/schema:/flyway/sql
+    networks:
+      - erp-network
     image: 'flyway/flyway:11.4'
     depends_on:
       erp_db_postgres:
         condition: service_started
         restart: true
-    networks:
-      - erp-network
 
   erp_service:
     build:
-      context: ./erp-frontend
+      context: ./erp-backend
       dockerfile: Dockerfile
     environment:
       PG_HOST: erp_db_postgres
