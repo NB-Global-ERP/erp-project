@@ -1,0 +1,8 @@
+[submodule "erp-backend"]
+	path = erp-backend
+	url = git@github.com:NB-Global-ERP/erp-backend.git
+	branch = master
+[submodule "erp-frontend"]
+	path = erp-frontend
+	url = git@github.com:NB-Global-ERP/erp-frontend.git
+	branch = main

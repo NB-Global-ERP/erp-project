@@ -1,0 +1,94 @@
+services:
+  frontend:
+    build:
+      context: ./erp-frontend
+      dockerfile: Dockerfile
+      network: host
+    container_name: erp-frontend-container
+    ports:
+      - "3000:3000"
+    networks:
+      - erp-network
+    restart: unless-stopped
+  erp_zookeeper:
+    image: confluentinc/cp-zookeeper:7.9.0
+    container_name: erp-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 21818:2181
+
+  erp_kafka:
+    image: confluentinc/cp-kafka:7.9.0
+    container_name: erp-kafka
+    depends_on:
+      - erp_zookeeper
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: erp_zookeeper:2181
+      KAFKA_LISTENERS: 'PLAINTEXT://erp_kafka:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://erp_kafka:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - erp-network
+
+  erp_db_postgres:
+    image: 'postgres:16.4'
+    container_name: erp-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${ERP_PG_USER}
+      POSTGRES_PASSWORD: ${ERP_PG_PASSWORD}
+      POSTGRES_DB: ${ERP_PG_DATABASE}
+    ports:
+      - "${ERP_PG_PORT}:5432"
+    networks:
+      - erp-network
+
+  erp_flyway:
+    container_name: erp-flyway
+    env_file:
+      - .env
+    environment:
+      FLYWAY_URL: jdbc:postgresql://erp_db_postgres:5432/${ERP_PG_DATABASE}
+      FLYWAY_USER: ${ERP_PG_USER}
+      FLYWAY_PASSWORD: ${ERP_PG_PASSWORD}
+    command:
+      - migrate
+    volumes:
+      - ./src/main/resources/db/schema:/flyway/sql
+    image: 'flyway/flyway:11.4'
+    depends_on:
+      erp_db_postgres:
+        condition: service_started
+        restart: true
+    networks:
+      - erp-network
+
+  erp_service:
+    build:
+      context: ./erp-frontend
+      dockerfile: Dockerfile
+    environment:
+      PG_HOST: erp_db_postgres
+      PG_PORT: 5432
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+      KAFKA_URL: erp_kafka:9092
+    ports:
+      - "8091:8091"
+    depends_on:
+      - erp_db_postgres
+    networks:
+      - erp-network
+
+networks:
+  erp-network:
+    driver: bridge
