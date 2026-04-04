@@ -65,6 +65,8 @@ services:
       POSTGRES_DB: ${ERP_PG_DATABASE}
     ports:
       - "${ERP_PG_PORT}:5432"
+    networks:
+      - erp-network
 
   erp_flyway:
     container_name: erp-flyway
