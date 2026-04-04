@@ -79,7 +79,7 @@ services:
     command:
       - migrate
     volumes:
-      - ./src/main/resources/db/schema:/flyway/sql
+      - ./erp-backend/src/main/resources/db/schema:/flyway/sql
     networks:
       - erp-network
     image: 'flyway/flyway:11.4'
