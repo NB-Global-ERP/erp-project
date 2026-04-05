@@ -5,7 +5,6 @@ git submodule update --remote --recursive
 ```
 
 **2. Собираем и запускаем докер**
-   ## Общая команда
    ```bash
    docker-compose up -d
    ```
